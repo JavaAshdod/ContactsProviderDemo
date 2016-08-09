@@ -4,8 +4,11 @@ import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.ContactsContract;
+import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
@@ -127,7 +130,14 @@ public class ContactListActivity extends AppCompatActivity {
 
     //Method the requires permission:
     private void readContacts() {
+        Cursor cursor = getContentResolver().query(ContactsContract.Contacts.CONTENT_URI, null, null, null, null);
 
+        if (cursor.moveToFirst()){
+            do{
+
+            }
+            while (cursor.moveToNext());
+        }
     }
 
     private void setupRecyclerView(@NonNull RecyclerView recyclerView) {
