@@ -4,12 +4,8 @@ import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.provider.ContactsContract;
-import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
@@ -19,8 +15,8 @@ import android.support.design.widget.Snackbar;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 
 import tomerbu.edu.contactsproviderdemo.contacts.MyContactsProvider;
@@ -28,7 +24,6 @@ import tomerbu.edu.contactsproviderdemo.models.Contact;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.jar.Manifest;
 
 /**
  * An activity representing a list of Contacts. This activity
@@ -47,6 +42,7 @@ public class ContactListActivity extends AppCompatActivity {
      */
     private boolean mTwoPane;
     private FloatingActionButton fab;
+    private RecyclerView recyclerView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +53,7 @@ public class ContactListActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         toolbar.setTitle(getTitle());
 
+        recyclerView = (RecyclerView)findViewById(R.id.contact_list);
         fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -67,14 +64,14 @@ public class ContactListActivity extends AppCompatActivity {
         });
 
         if (checkContactsPermission()) {
-            readContacts();
+            setupRecyclerView();
         } else {
             requestContactsPermission();
         }
 
-        View recyclerView = findViewById(R.id.contact_list);
+
         assert recyclerView != null;
-        setupRecyclerView((RecyclerView) recyclerView);
+
 
         if (findViewById(R.id.contact_detail_container) != null) {
             // The detail container view will be present only in the
@@ -114,7 +111,7 @@ public class ContactListActivity extends AppCompatActivity {
         //Get the result:
         if (requestCode == REQUEST_CODE_CONTACTS) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                readContacts();
+                setupRecyclerView();
             } else {
                 Snackbar.make(fab, "We need your contacts to display the list", Snackbar.LENGTH_INDEFINITE).setAction("OK", new View.OnClickListener() {
                     @Override
@@ -126,79 +123,12 @@ public class ContactListActivity extends AppCompatActivity {
         }
     }
 
-    //Method the requires permission:
-    private void readContacts() {
-        Uri contactsURI = ContactsContract.Contacts.CONTENT_URI;
 
-
-        Cursor cursor = getContentResolver().query(contactsURI, null, null, null, null);
-        if (cursor != null && cursor.moveToFirst()) {
-            do {
-                String id = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts._ID));
-                String name = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME));
-                ArrayList<String> phones = getPhones(id);
-                ArrayList<String> emails = getEmails(id);
-
-                Toast.makeText(ContactListActivity.this, name, Toast.LENGTH_SHORT).show();
-
-                for (String email : emails) {
-                    Toast.makeText(ContactListActivity.this, email, Toast.LENGTH_SHORT).show();
-                }
-
-                for (String phone : phones) {
-                    Toast.makeText(ContactListActivity.this, phone, Toast.LENGTH_SHORT).show();
-                }
-            } while (cursor.moveToNext());
-        }
-    }
-
-    private ArrayList<String> getPhones(String id) {
-        ArrayList<String> phones = new ArrayList<>();
-
-        Uri phoneURI = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
-
-        Cursor cursor = getContentResolver().query(phoneURI, null,
-                ContactsContract.CommonDataKinds.Phone.CONTACT_ID + "=?",
-                new String[]{id}, null
-        );
-
-        if (cursor != null && cursor.moveToFirst()) {
-            do {
-                String number = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
-                phones.add(number);
-
-            } while (cursor.moveToNext());
-        }
-        return phones;
-    }
-
-
-    private ArrayList<String> getEmails(String id) {
-        ArrayList<String> emails = new ArrayList<>();
-
-        Uri emailUri = ContactsContract.CommonDataKinds.Email.CONTENT_URI;
-
-
-        Cursor cursor = getContentResolver().query(emailUri, null,
-                ContactsContract.CommonDataKinds.Email.CONTACT_ID + "=?",
-                new String[]{id}, null
-        );
-
-        if (cursor != null && cursor.moveToFirst()) {
-            do {
-                String email = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Email.DATA));
-                emails.add(email);
-
-            } while (cursor.moveToNext());
-        }
-        return emails;
-    }
-
-
-    private void setupRecyclerView(@NonNull RecyclerView recyclerView) {
-        MyContactsProvider provider = new MyContactsProvider();
-
-        recyclerView.setAdapter(new ContactAdapter(provider.getContacts()));
+    private void setupRecyclerView() {
+        MyContactsProvider provider = new MyContactsProvider(this);
+        ArrayList<Contact> contacts = provider.getContacts();
+        ContactAdapter adapter = new ContactAdapter(contacts);
+        recyclerView.setAdapter(adapter);
     }
 
     public class ContactAdapter
@@ -213,17 +143,14 @@ public class ContactListActivity extends AppCompatActivity {
         @Override
         public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             View view = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.contact_list_content, parent, false);
+                    .inflate(R.layout.contact_list_item, parent, false);
             return new ViewHolder(view);
         }
 
         @Override
         public void onBindViewHolder(final ViewHolder holder, int position) {
             Contact c = contactList.get(position);
-
-
             holder.contact = c;
-            holder.tvID.setText(c.getId());
             holder.tvContactName.setText(c.getName());
 
             holder.layout.setOnClickListener(new View.OnClickListener() {
@@ -250,16 +177,14 @@ public class ContactListActivity extends AppCompatActivity {
         }
 
         public class ViewHolder extends RecyclerView.ViewHolder {
-            public final View layout;
-            public final TextView tvID;
+            public final RelativeLayout layout;
             public final TextView tvContactName;
             public Contact contact;
 
             public ViewHolder(View view) {
                 super(view);
-                layout = view;
-                tvID = (TextView) view.findViewById(R.id.tvID);
-                tvContactName = (TextView) view.findViewById(R.id.tvName);
+                layout = (RelativeLayout) view.findViewById(R.id.layout);
+                tvContactName = (TextView) view.findViewById(R.id.tvContactName);
             }
 
             @Override

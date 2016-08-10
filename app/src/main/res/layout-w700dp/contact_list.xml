@@ -28,7 +28,7 @@
 
         app:layoutManager="LinearLayoutManager"
         tools:context="tomerbu.edu.contactsproviderdemo.ContactListActivity"
-        tools:listitem="@layout/contact_list_content" />
+        tools:listitem="@layout/contact_list_item" />
 
     <FrameLayout
 
