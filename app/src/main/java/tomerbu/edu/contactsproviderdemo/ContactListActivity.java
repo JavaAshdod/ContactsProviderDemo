@@ -130,28 +130,68 @@ public class ContactListActivity extends AppCompatActivity {
     private void readContacts() {
         Uri contactsURI = ContactsContract.Contacts.CONTENT_URI;
 
-        Cursor cursor = getContentResolver().query(contactsURI, null, null, null, null);
 
-        if (cursor.moveToFirst()){
-            do{
+        Cursor cursor = getContentResolver().query(contactsURI, null, null, null, null);
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
                 String id = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts._ID));
                 String name = cursor.getString(cursor.getColumnIndex(ContactsContract.Contacts.DISPLAY_NAME));
-                Toast.makeText(ContactListActivity.this, name + " " + id, Toast.LENGTH_SHORT).show();
+                ArrayList<String> phones = getPhones(id);
+                ArrayList<String> emails = getEmails(id);
 
-                String phone = getPhone(id);
-            }
-            while (cursor.moveToNext());
+                Toast.makeText(ContactListActivity.this, name, Toast.LENGTH_SHORT).show();
+
+                for (String email : emails) {
+                    Toast.makeText(ContactListActivity.this, email, Toast.LENGTH_SHORT).show();
+                }
+
+                for (String phone : phones) {
+                    Toast.makeText(ContactListActivity.this, phone, Toast.LENGTH_SHORT).show();
+                }
+            } while (cursor.moveToNext());
         }
     }
 
-    private String getPhone(String id) {
-        Uri contentUri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
-        Cursor cursor = getContentResolver().query(contentUri, null, "_ID = ?", new String[]{id}, null);
-        if (cursor.moveToFirst()) {
-            String number = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
-            Toast.makeText(ContactListActivity.this, number, Toast.LENGTH_SHORT).show();
+    private ArrayList<String> getPhones(String id) {
+        ArrayList<String> phones = new ArrayList<>();
+
+        Uri phoneURI = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
+
+        Cursor cursor = getContentResolver().query(phoneURI, null,
+                ContactsContract.CommonDataKinds.Phone.CONTACT_ID + "=?",
+                new String[]{id}, null
+        );
+
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                String number = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
+                phones.add(number);
+
+            } while (cursor.moveToNext());
         }
-        return null;
+        return phones;
+    }
+
+
+    private ArrayList<String> getEmails(String id) {
+        ArrayList<String> emails = new ArrayList<>();
+
+        Uri emailUri = ContactsContract.CommonDataKinds.Email.CONTENT_URI;
+
+
+        Cursor cursor = getContentResolver().query(emailUri, null,
+                ContactsContract.CommonDataKinds.Email.CONTACT_ID + "=?",
+                new String[]{id}, null
+        );
+
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                String email = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Email.DATA));
+                emails.add(email);
+
+            } while (cursor.moveToNext());
+        }
+        return emails;
     }
 
 
